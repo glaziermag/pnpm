@@ -1,0 +1,66 @@
+name: Probe Cargo Equivalence
+
+# Fork-only A/B probe for pnpm/pnpm .github/workflows/cargo-equivalence.yml.
+# A = the workflow's steps as on main; B = the same steps plus the
+# install-crates action that the other Rust workflows run after rustup.
+# runs-on is ubuntu-latest (Blacksmith runners are not available to forks).
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - probe/cargo-equivalence
+
+jobs:
+  as-on-main:
+    name: A - as on main (no install-crates)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Rust toolchain
+        uses: $/.github/actions/rustup
+
+      - name: Build pnpm and the harness
+        run: cargo build --release --bin pnpm --bin cargo-equivalence
+
+  with-install-crates:
+    name: B - with install-crates
+    runs-on: ubuntu-latest
+    timeout-minutes: 100
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Rust toolchain
+        uses: $/.github/actions/rustup
+
+      - name: Install crates
+        uses: $/.github/actions/install-crates
+
+      - name: Build pnpm and the harness
+        run: cargo build --release --bin pnpm --bin cargo-equivalence
+
+      - name: Compare pnpm's Cargo resolution against cargo's
+        run: |
+          ./target/release/cargo-equivalence \
+            --pnpm "$PWD/target/release/pnpm" \
+            --work-dir "$RUNNER_TEMP/cargo-equivalence-work"
+
+      - name: Upload the lockfiles that differed
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: cargo-equivalence-lockfiles
+          path: ${{ runner.temp }}/cargo-equivalence-work/**/Cargo.lock
+          retention-days: 7
+          if-no-files-found: ignore
