@@ -1,0 +1,9 @@
+name: Queued probe
+on:
+  push:
+    branches: [probe-queued]
+jobs:
+  stuck:
+    runs-on: [self-hosted, no-such-runner-label]
+    steps:
+      - run: echo never
