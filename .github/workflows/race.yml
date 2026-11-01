@@ -1,0 +1,9 @@
+name: Race probe
+on:
+  push:
+    branches: [probe-race]
+jobs:
+  wait:
+    runs-on: ubuntu-latest
+    steps:
+      - run: sleep 120
