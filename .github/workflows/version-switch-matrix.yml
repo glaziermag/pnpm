@@ -11,7 +11,7 @@ permissions:
 
 on:
   push:
-    branches: [probe/vsm-allow-build]
+    branches: [probe/vsm-macos-arm]
   workflow_dispatch:
   schedule:
     - cron: '0 6 * * *'
@@ -33,20 +33,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-24.04
-            os_label: ubuntu
-            arm: stock
-            allow_flag: ''
-          - os: ubuntu-24.04
-            os_label: ubuntu
+          - os: macos-15
+            os_label: macos-15-arm64
             arm: fixed
             allow_flag: --allow-build=pnpm
-          - os: macos-latest
-            os_label: macos
-            arm: fixed
-            allow_flag: --allow-build=pnpm
-          - os: windows-2025
-            os_label: windows
+          - os: macos-26
+            os_label: macos-26-arm64
             arm: fixed
             allow_flag: --allow-build=pnpm
     steps:
