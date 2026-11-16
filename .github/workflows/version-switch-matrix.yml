@@ -10,6 +10,8 @@ permissions:
   contents: read
 
 on:
+  push:
+    branches: [probe/vsm-allow-build]
   workflow_dispatch:
   schedule:
     - cron: '0 6 * * *'
@@ -20,23 +22,33 @@ concurrency:
 
 jobs:
   version-switch-matrix:
-    if: github.repository == 'pnpm/pnpm'
-    name: Version Switch Matrix (${{ matrix.os_label }})
+    name: Version Switch Matrix (${{ matrix.os_label }}, ${{ matrix.arm }})
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    timeout-minutes: 90
     env:
       CARGO_PROFILE_DEV_DEBUG: line-tables-only
       CARGO_PROFILE_TEST_DEBUG: line-tables-only
+      ALLOW_FLAG: ${{ matrix.allow_flag }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: blacksmith-8vcpu-ubuntu-2404
+          - os: ubuntu-24.04
             os_label: ubuntu
-          - os: blacksmith-12vcpu-macos-latest
+            arm: stock
+            allow_flag: ''
+          - os: ubuntu-24.04
+            os_label: ubuntu
+            arm: fixed
+            allow_flag: --allow-build=pnpm
+          - os: macos-latest
             os_label: macos
-          - os: blacksmith-8vcpu-windows-2025
+            arm: fixed
+            allow_flag: --allow-build=pnpm
+          - os: windows-2025
             os_label: windows
+            arm: fixed
+            allow_flag: --allow-build=pnpm
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -90,7 +102,7 @@ jobs:
             outer_dir="$RUNNER_TEMP/outer-${outer_spec//[^a-zA-Z0-9]/_}"
             mkdir -p "$outer_dir"
             printf '{"name":"outer-runner","private":true}\n' > "$outer_dir/package.json"
-            pnpm --dir "$outer_dir" add "$outer_spec"
+            pnpm --dir "$outer_dir" add $ALLOW_FLAG "$outer_spec"
             outer_bin="$outer_dir/node_modules/.bin/pnpm"
             if [ "${RUNNER_OS:-}" = "Windows" ] && [ -f "${outer_bin}.cmd" ]; then
               outer_bins+=("${outer_bin}.cmd")
